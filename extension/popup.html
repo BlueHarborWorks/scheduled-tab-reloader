@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Scheduled Tab Reloader</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <header>
+    <h1>Scheduled Tab Reloader</h1>
+  </header>
+
+  <section>
+    <div class="row-head">
+      <h2>Tabs to reload</h2>
+      <label class="small"><input type="checkbox" id="select-all"> All in window</label>
+    </div>
+    <ul id="tab-list" class="tab-list"></ul>
+  </section>
+
+  <section class="form">
+    <label class="field">
+      <span>Reload every</span>
+      <input type="number" id="interval-value" min="1" step="1" value="2">
+      <select id="interval-unit">
+        <option value="1000">seconds</option>
+        <option value="60000" selected>minutes</option>
+        <option value="3600000">hours</option>
+      </select>
+    </label>
+    <label class="field">
+      <span>For</span>
+      <input type="number" id="duration-value" min="1" step="1" value="2">
+      <select id="duration-unit">
+        <option value="60000">minutes</option>
+        <option value="3600000" selected>hours</option>
+        <option value="86400000">days</option>
+        <option value="forever">until I stop it</option>
+      </select>
+    </label>
+    <label class="check"><input type="checkbox" id="bypass-cache"> Bypass cache (hard reload)</label>
+    <p id="summary" class="summary"></p>
+    <p id="error" class="error" hidden></p>
+    <button id="start" class="primary">Start</button>
+  </section>
+
+  <section>
+    <div class="row-head">
+      <h2>Active schedules</h2>
+      <button id="stop-all" class="link" hidden>Stop all</button>
+    </div>
+    <ul id="schedule-list" class="schedule-list"></ul>
+    <p id="no-schedules" class="muted">Nothing scheduled.</p>
+  </section>
+
+  <script src="popup.js"></script>
+</body>
+</html>

@@ -1,0 +1,17 @@
+{
+  "name": "scheduled-tab-reloader",
+  "version": "1.0.1",
+  "private": true,
+  "description": "Privacy-first Firefox extension for reloading selected tabs on a schedule.",
+  "scripts": {
+    "test": "node --test test/background.test.cjs",
+    "lint": "web-ext lint --source-dir extension",
+    "build": "web-ext build --source-dir extension --artifacts-dir dist --overwrite-dest",
+    "run": "web-ext run --source-dir extension",
+    "sign:unlisted": "web-ext sign --source-dir extension --artifacts-dir dist --channel unlisted",
+    "sign:listed": "web-ext sign --source-dir extension --artifacts-dir dist --channel listed --amo-metadata amo-metadata.json"
+  },
+  "devDependencies": {
+    "web-ext": "^8.0.0"
+  }
+}

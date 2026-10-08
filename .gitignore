@@ -1,0 +1,6 @@
+node_modules/
+dist/
+.env
+.web-extension-id
+.DS_Store
+HANDOFF-AMO-PUBLISH.md
