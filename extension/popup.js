@@ -1,7 +1,9 @@
 const $ = (id) => document.getElementById(id);
 const MIN_INTERVAL_MS = 10 * 1000;
+const PREF_FIELDS = ["interval-value", "interval-unit", "duration-value", "duration-unit"];
 
-let tabs = [];
+let tabs = []; // tabs in the current window (the picker)
+let allTabs = []; // tabs in every window (titles for schedules started elsewhere)
 let schedules = {};
 
 function el(tag, props = {}, children = []) {
@@ -58,10 +60,18 @@ function validate({ tabIds, intervalMs, durationMs }) {
   return null;
 }
 
+function showError(message) {
+  $("error").textContent = message || "";
+  $("error").hidden = !message;
+}
+
 function updateSummary() {
   const form = readForm();
   const error = validate(form);
   $("duration-value").disabled = $("duration-unit").value === "forever";
+  // The spinner's lower bound follows the unit, so arrowing down cannot
+  // land on an interval the background would reject.
+  $("interval-value").min = $("interval-unit").value === "1000" ? "10" : "1";
   $("start").disabled = !!error;
   if (error) {
     $("summary").textContent = error;
@@ -86,9 +96,10 @@ function renderTabs(activeTabId, preserveChecked) {
   const busy = scheduledTabIds();
   const list = $("tab-list");
   list.replaceChildren();
+  let activeItem = null;
   for (const tab of tabs) {
     const box = el("input", { type: "checkbox", value: String(tab.id), checked: checked.has(tab.id) });
-    box.addEventListener("change", () => { syncSelectAll(); updateSummary(); });
+    box.addEventListener("change", () => { syncSelectAll(); updateSummary(); showError(null); });
     const icon = tab.favIconUrl && /^(https?|data):/.test(tab.favIconUrl)
       ? el("img", { src: tab.favIconUrl, alt: "" })
       : el("span", { className: "favicon-blank" });
@@ -97,8 +108,11 @@ function renderTabs(activeTabId, preserveChecked) {
     }
     const children = [box, icon, el("span", { className: "title", textContent: tab.title || tab.url, title: tab.url })];
     if (busy.has(tab.id)) children.push(el("span", { className: "chip", textContent: "scheduled" }));
-    list.append(el("li", {}, [el("label", {}, children)]));
+    const item = el("li", {}, [el("label", {}, children)]);
+    if (tab.id === activeTabId) activeItem = item;
+    list.append(item);
   }
+  if (activeItem && !preserveChecked) activeItem.scrollIntoView({ block: "nearest" });
   syncSelectAll();
 }
 
@@ -108,7 +122,7 @@ function syncSelectAll() {
 }
 
 function tabTitle(tabId) {
-  const t = tabs.find((x) => x.id === tabId);
+  const t = allTabs.find((x) => x.id === tabId) || tabs.find((x) => x.id === tabId);
   return t ? t.title || t.url : `Tab ${tabId}`;
 }
 
@@ -123,9 +137,10 @@ function renderSchedules() {
     const names = s.tabIds.map(tabTitle);
     const label = names.length === 1 ? names[0] : `${names.length} tabs: ${names.join(", ")}`;
     const ends = s.endAt == null ? "until stopped" : `ends ${formatClock(s.endAt)} (${formatDuration(s.endAt - now)} left)`;
-    const stop = el("button", { className: "secondary", textContent: "Stop" });
+    const next = s.nextAt - now < 1000 ? "Next reload now." : `Next reload in ${formatDuration(s.nextAt - now)}.`;
+    const stop = el("button", { className: "secondary", textContent: "Stop", title: "Stop this schedule" });
     stop.addEventListener("click", async () => {
-      await browser.runtime.sendMessage({ type: "stop", id: s.id });
+      await send({ type: "stop", id: s.id });
       await refresh(true);
     });
     list.append(el("li", {}, [
@@ -134,19 +149,46 @@ function renderSchedules() {
       el("span", { className: "meta", textContent: `Every ${formatInterval(s.intervalMs)}, ${ends}` }),
       el("span", {
         className: "meta",
-        textContent: `Next reload in ${formatDuration(s.nextAt - now)}. Reloaded ${s.reloads}` +
+        textContent: `${next} Reloaded ${s.reloads}` +
           (s.totalReloads != null ? ` of ${s.totalReloads} times.` : ` time${s.reloads === 1 ? "" : "s"}.`),
       }),
     ]));
   }
 }
 
-async function refresh(preserveChecked) {
-  const res = await browser.runtime.sendMessage({ type: "list" });
-  schedules = res && res.ok ? res.schedules : {};
+// Messaging can fail while the event page is restarting; surface it instead
+// of leaving the popup half-rendered.
+async function send(msg) {
+  try {
+    const res = await browser.runtime.sendMessage(msg);
+    if (res && !res.ok && res.error) showError(res.error);
+    return res || { ok: false, error: "No response from the extension." };
+  } catch (err) {
+    showError("The extension did not respond. Try closing and reopening the popup.");
+    return { ok: false, error: String(err && err.message) };
+  }
+}
+
+function tabSignature(list) {
+  return list.map((t) => `${t.id}:${t.title || ""}:${t.favIconUrl || ""}`).join("|");
+}
+
+function scheduleSignature(set) {
+  return Object.values(set).map((s) => `${s.id}:${s.tabIds.join(",")}`).sort().join("|");
+}
+
+async function queryTabs() {
   const [active] = await browser.tabs.query({ active: true, currentWindow: true });
   tabs = await browser.tabs.query({ currentWindow: true });
-  renderTabs(active && active.id, preserveChecked);
+  allTabs = await browser.tabs.query({});
+  return active && active.id;
+}
+
+async function refresh(preserveChecked) {
+  const res = await send({ type: "list" });
+  schedules = res.ok ? res.schedules : {};
+  const activeId = await queryTabs();
+  renderTabs(activeId, preserveChecked);
   renderSchedules();
   updateSummary();
 }
@@ -155,7 +197,7 @@ async function loadPrefs() {
   try {
     const { prefs } = await browser.storage.local.get("prefs");
     if (!prefs) return;
-    for (const id of ["interval-value", "interval-unit", "duration-value", "duration-unit"]) {
+    for (const id of PREF_FIELDS) {
       if (prefs[id] != null) $(id).value = prefs[id];
     }
     $("bypass-cache").checked = !!prefs.bypassCache;
@@ -166,48 +208,68 @@ async function loadPrefs() {
 
 async function savePrefs() {
   const prefs = { bypassCache: $("bypass-cache").checked };
-  for (const id of ["interval-value", "interval-unit", "duration-value", "duration-unit"]) {
+  for (const id of PREF_FIELDS) {
     prefs[id] = $(id).value;
   }
   try { await browser.storage.local.set({ prefs }); } catch { /* not critical */ }
 }
 
-$("select-all").addEventListener("change", (e) => {
-  for (const b of document.querySelectorAll(".tab-list input")) b.checked = e.target.checked;
-  updateSummary();
-});
-for (const id of ["interval-value", "interval-unit", "duration-value", "duration-unit"]) {
-  $(id).addEventListener("input", updateSummary);
-}
-$("start").addEventListener("click", async () => {
+async function start() {
   const form = readForm();
   const error = validate(form);
-  $("error").hidden = true;
+  showError(null);
   if (error) return;
-  const res = await browser.runtime.sendMessage({ type: "start", ...form });
-  if (!res || !res.ok) {
-    $("error").textContent = (res && res.error) || "Could not start the schedule.";
-    $("error").hidden = false;
+  $("start").disabled = true;
+  const res = await send({ type: "start", ...form });
+  if (!res.ok) {
+    showError(res.error || "Could not start the schedule.");
+    $("start").disabled = false;
     return;
   }
   await savePrefs();
   await refresh(true);
+}
+
+$("select-all").addEventListener("change", (e) => {
+  for (const b of document.querySelectorAll(".tab-list input")) b.checked = e.target.checked;
+  updateSummary();
+  showError(null);
+});
+for (const id of PREF_FIELDS) {
+  $(id).addEventListener("input", () => { updateSummary(); showError(null); });
+}
+$("bypass-cache").addEventListener("change", () => showError(null));
+$("start").addEventListener("click", start);
+document.querySelector(".form").addEventListener("keydown", (e) => {
+  if (e.key === "Enter" && e.target.tagName !== "BUTTON") {
+    e.preventDefault();
+    start();
+  }
 });
 $("stop-all").addEventListener("click", async () => {
-  await browser.runtime.sendMessage({ type: "stopAll" });
+  await send({ type: "stopAll" });
   await refresh(true);
 });
 
 (async () => {
   await loadPrefs();
   await refresh(false);
-  // Keep countdowns live, and pick up reloads that happened while open.
+  // Keep countdowns live, pick up reloads that happened while open, and
+  // follow tabs that were opened, closed or renamed in the meantime.
   setInterval(async () => {
-    const res = await browser.runtime.sendMessage({ type: "list" });
-    if (res && res.ok) {
-      const changed = JSON.stringify(Object.keys(res.schedules)) !== JSON.stringify(Object.keys(schedules));
-      schedules = res.schedules;
-      if (changed) renderTabs(null, true);
+    let res;
+    try {
+      res = await browser.runtime.sendMessage({ type: "list" });
+    } catch {
+      return; // transient; the next tick will try again
+    }
+    const before = scheduleSignature(schedules);
+    if (res && res.ok) schedules = res.schedules;
+    const tabsBefore = tabSignature(tabs);
+    const activeId = await queryTabs();
+    if (tabSignature(tabs) !== tabsBefore || scheduleSignature(schedules) !== before) {
+      renderTabs(activeId, true);
+      updateSummary();
     }
     renderSchedules();
   }, 1000);

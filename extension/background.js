@@ -5,6 +5,7 @@
 
 const ALARM_PREFIX = "reload:";
 const MIN_INTERVAL_MS = 10 * 1000;
+const BADGE_COLOR = "#2563eb";
 
 // Serialize every read-modify-write of the schedule store: alarms for several
 // schedules can fire together, and popup messages can arrive mid-tick.
@@ -25,18 +26,34 @@ async function saveSchedules(schedules) {
   await updateBadge(schedules);
 }
 
+// The badge is a convenience, never a reason for a schedule to fail: some
+// builds (Firefox for Android) have no toolbar badge and reject these calls.
 async function updateBadge(schedules) {
   const count = Object.keys(schedules).length;
-  await browser.action.setBadgeText({ text: count ? String(count) : "" });
-  await browser.action.setBadgeBackgroundColor({ color: "#2563eb" });
+  try {
+    await browser.action.setBadgeText({ text: count ? String(count) : "" });
+    await browser.action.setBadgeBackgroundColor({ color: BADGE_COLOR });
+  } catch {
+    // No badge on this platform.
+  }
 }
 
 function newId() {
   return Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
 }
 
+function normalizeTabIds(tabIds) {
+  if (!Array.isArray(tabIds)) return [];
+  const seen = new Set();
+  for (const t of tabIds) {
+    if (Number.isInteger(t) && t >= 0) seen.add(t);
+  }
+  return [...seen];
+}
+
 async function startSchedule({ tabIds, intervalMs, durationMs, bypassCache }) {
-  if (!Array.isArray(tabIds) || tabIds.length === 0) {
+  tabIds = normalizeTabIds(tabIds);
+  if (tabIds.length === 0) {
     throw new Error("Select at least one tab.");
   }
   if (!Number.isFinite(intervalMs) || intervalMs < MIN_INTERVAL_MS) {
@@ -59,7 +76,7 @@ async function startSchedule({ tabIds, intervalMs, durationMs, bypassCache }) {
     const id = newId();
     schedules[id] = {
       id,
-      tabIds: [...tabIds],
+      tabIds,
       intervalMs,
       startedAt: now,
       endAt: durationMs == null ? null : now + durationMs,
@@ -67,6 +84,7 @@ async function startSchedule({ tabIds, intervalMs, durationMs, bypassCache }) {
       // little each tick, and "every 2 min for 2 hours" must mean 60 reloads.
       totalReloads: durationMs == null ? null : Math.floor(durationMs / intervalMs),
       nextAt: now + intervalMs,
+      lastReloadAt: null,
       bypassCache: !!bypassCache,
       reloads: 0,
     };
@@ -120,6 +138,16 @@ async function onAlarm(alarm) {
       return;
     }
     const now = Date.now();
+
+    // After the computer sleeps, missed periods can be delivered in a burst.
+    // Reloading on each of them would hammer the page, so a tick that arrives
+    // less than half an interval after the previous reload is ignored.
+    if (s.lastReloadAt != null && now - s.lastReloadAt < s.intervalMs / 2) {
+      s.nextAt = Math.max(now, (alarm.scheduledTime || now)) + s.intervalMs;
+      await saveSchedules(schedules);
+      return;
+    }
+
     const alive = [];
     for (const tabId of s.tabIds) {
       if (await tabExists(tabId)) alive.push(tabId);
@@ -133,9 +161,15 @@ async function onAlarm(alarm) {
     }
     s.tabIds = alive;
     s.reloads += 1;
+    s.lastReloadAt = now;
     s.nextAt = (alarm.scheduledTime || now) + s.intervalMs;
 
-    const finished = s.totalReloads != null && s.reloads >= s.totalReloads;
+    // Done when the reload count is reached, or when the clock has run more
+    // than one interval past the planned end (a long sleep, for example), so
+    // a timed schedule never keeps going long after the time the user chose.
+    const finished =
+      s.totalReloads != null &&
+      (s.reloads >= s.totalReloads || (s.endAt != null && now > s.endAt + s.intervalMs));
     if (alive.length === 0 || finished) {
       await browser.alarms.clear(alarm.name);
       delete schedules[id];
@@ -178,20 +212,24 @@ async function onMessage(msg) {
   }
 }
 
-browser.alarms.onAlarm.addListener(onAlarm);
-browser.tabs.onRemoved.addListener(onTabRemoved);
-browser.runtime.onMessage.addListener((msg) =>
-  onMessage(msg).catch((err) => ({ ok: false, error: err.message }))
-);
-browser.runtime.onStartup.addListener(async () => {
-  // storage.session is empty after a restart; drop any alarms that outlived it.
+// storage.session is empty after a browser restart or an extension update;
+// drop any alarms that outlived it and clear the badge.
+async function resetState() {
   const alarms = await browser.alarms.getAll();
   for (const a of alarms) {
     if (a.name.startsWith(ALARM_PREFIX)) await browser.alarms.clear(a.name);
   }
   await updateBadge({});
-});
+}
+
+browser.alarms.onAlarm.addListener(onAlarm);
+browser.tabs.onRemoved.addListener(onTabRemoved);
+browser.runtime.onMessage.addListener((msg) =>
+  onMessage(msg).catch((err) => ({ ok: false, error: err.message }))
+);
+browser.runtime.onStartup.addListener(resetState);
+browser.runtime.onInstalled.addListener(resetState);
 
 if (typeof module !== "undefined") {
-  module.exports = { onAlarm, onTabRemoved, onMessage, MIN_INTERVAL_MS };
+  module.exports = { onAlarm, onTabRemoved, onMessage, resetState, MIN_INTERVAL_MS };
 }

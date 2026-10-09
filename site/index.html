@@ -1,0 +1,1248 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Scheduled Tab Reloader</title>
+    <meta
+      name="description"
+      content="Scheduled Tab Reloader is a Firefox extension that reloads the tabs you choose on a schedule, for example every 2 minutes for 2 hours, and stops on its own."
+    />
+    <link rel="icon" type="image/png" href="img/icon-32.png" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap"
+    />
+    <style>
+      /* Layout: one centred column, 1080px max; the hero splits into copy and a working demo, then stacks on phones. */
+      :root {
+        --paper: #ffffff;
+        --wash: #f6f6f4;
+        --ink: #1b1b1a;
+        --ink-soft: #5d5d58;
+        --rule: #e2e2de;
+        --rule-strong: #c7c7c2;
+        --accent: #2563eb;
+        --accent-soft: rgb(37 99 235 / 0.16);
+        --accent-tint: #e8effd;
+        --on-accent-tint: #1e40af;
+        --focus: #2f6fde;
+        --error: #b42318;
+
+        --display: 'Bricolage Grotesque', 'Helvetica Neue', Arial, sans-serif;
+        --body: 'IBM Plex Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
+        --mono: 'IBM Plex Mono', ui-monospace, Menlo, Consolas, monospace;
+
+        --step--1: 0.8125rem;
+        --step-0: 1rem;
+        --step-1: 1.1875rem;
+        --step-2: 1.5rem;
+        --step-3: clamp(2.25rem, 1.6rem + 2.6vw, 3.5rem);
+        --radius: 6px;
+        color-scheme: light;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root:not([data-theme='light']) {
+          --paper: #161615;
+          --wash: #1f1f1e;
+          --ink: #ececea;
+          --ink-soft: #a5a5a0;
+          --rule: #2f2f2d;
+          --rule-strong: #46463f;
+          --accent: #4f8cff;
+          --accent-soft: rgb(79 140 255 / 0.22);
+          --accent-tint: #23324f;
+          --on-accent-tint: #bcd2ff;
+          --focus: #7aa7ff;
+          --error: #f2826f;
+          color-scheme: dark;
+        }
+      }
+      :root[data-theme='dark'] {
+        --paper: #161615;
+        --wash: #1f1f1e;
+        --ink: #ececea;
+        --ink-soft: #a5a5a0;
+        --rule: #2f2f2d;
+        --rule-strong: #46463f;
+        --accent: #4f8cff;
+        --accent-soft: rgb(79 140 255 / 0.22);
+        --accent-tint: #23324f;
+        --on-accent-tint: #bcd2ff;
+        --focus: #7aa7ff;
+        --error: #f2826f;
+        color-scheme: dark;
+      }
+
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        background: var(--paper);
+        color: var(--ink);
+        font: 400 var(--step-0) / 1.6 var(--body);
+        -webkit-font-smoothing: antialiased;
+      }
+      img {
+        display: block;
+        max-width: 100%;
+        height: auto;
+      }
+      a {
+        color: inherit;
+        text-decoration-color: var(--rule-strong);
+        text-underline-offset: 3px;
+      }
+      a:hover {
+        text-decoration-color: currentColor;
+      }
+      :focus-visible {
+        outline: 2px solid var(--focus);
+        outline-offset: 2px;
+      }
+      h1,
+      h2,
+      h3 {
+        margin: 0;
+        text-wrap: balance;
+      }
+      p {
+        margin: 0;
+      }
+      kbd,
+      code {
+        font-family: var(--mono);
+        font-size: 0.875em;
+      }
+      pre {
+        margin: 0;
+        padding: 14px 16px;
+        overflow-x: auto;
+        border: 1px solid var(--rule);
+        border-radius: var(--radius);
+        background: var(--wash);
+        font: 400 var(--step--1) / 1.7 var(--mono);
+      }
+      .visually-hidden {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        overflow: hidden;
+        clip-path: inset(50%);
+        white-space: nowrap;
+      }
+
+      .wrap {
+        width: 100%;
+        max-width: 1080px;
+        margin-inline: auto;
+        padding-inline: 24px;
+      }
+      @media (max-width: 480px) {
+        .wrap {
+          padding-inline: 16px;
+        }
+      }
+
+      /* Header */
+      .site-head {
+        border-bottom: 1px solid var(--rule);
+      }
+      .site-head .wrap {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 8px 24px;
+        padding-block: 14px;
+      }
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font: 600 var(--step-1) / 1 var(--display);
+        text-decoration: none;
+      }
+      .brand img {
+        width: 26px;
+        height: 26px;
+      }
+      .site-head nav {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 4px 20px;
+        margin-left: auto;
+        font-size: var(--step--1);
+      }
+      .site-head nav a {
+        color: var(--ink-soft);
+        text-decoration: none;
+      }
+      .site-head nav a:hover {
+        color: var(--ink);
+      }
+
+      /* Hero */
+      .hero {
+        padding-block: 64px 72px;
+      }
+      .hero .wrap {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+        gap: 48px;
+        align-items: start;
+      }
+      .eyebrow {
+        margin-bottom: 16px;
+        color: var(--ink-soft);
+        font-size: var(--step--1);
+        font-weight: 500;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+      }
+      .hero h1 {
+        position: relative;
+        z-index: 0;
+        font: 600 var(--step-3) / 1.04 var(--display);
+        letter-spacing: -0.02em;
+      }
+      .hero h1 .shift {
+        position: relative;
+        white-space: nowrap;
+      }
+      .hero h1 .shift::after {
+        content: '';
+        position: absolute;
+        left: -0.04em;
+        right: -0.04em;
+        bottom: 0.08em;
+        height: 0.32em;
+        background: var(--accent);
+        opacity: 0.35;
+        z-index: -1;
+      }
+      .lede {
+        max-width: 34em;
+        margin-top: 20px;
+        color: var(--ink-soft);
+        font-size: var(--step-1);
+        line-height: 1.55;
+      }
+      .status {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 12px 20px;
+        margin-top: 28px;
+        font-size: var(--step--1);
+      }
+      .chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 5px 12px;
+        border: 1px solid var(--rule-strong);
+        border-radius: 999px;
+        color: var(--ink);
+        font-weight: 500;
+      }
+      .chip::before {
+        content: '';
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        background: var(--accent);
+      }
+
+      /* Demo: a working copy of the popup */
+      .demo {
+        border: 1px solid var(--rule);
+        border-radius: 10px;
+        background: var(--paper);
+        box-shadow: 0 10px 30px -18px rgb(0 0 0 / 0.35);
+      }
+      .demo-bar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 10px 14px;
+        border-bottom: 1px solid var(--rule);
+        color: var(--ink-soft);
+        font-size: var(--step--1);
+      }
+      .demo-section {
+        padding: 12px 14px;
+        border-bottom: 1px solid var(--rule);
+      }
+      .demo-section:last-child {
+        border-bottom: 0;
+      }
+      .demo-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 8px;
+      }
+      .demo-head h3 {
+        color: var(--ink-soft);
+        font: 500 0.75rem / 1 var(--body);
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+      }
+      .small {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        color: var(--ink-soft);
+        font-size: 0.75rem;
+      }
+      .tab-list,
+      .schedule-list {
+        margin: 0;
+        padding: 0;
+        list-style: none;
+      }
+      .tab-list {
+        border: 1px solid var(--rule);
+        border-radius: var(--radius);
+      }
+      .tab-list li + li {
+        border-top: 1px solid var(--rule);
+      }
+      .tab-list label {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 6px 10px;
+        font-size: var(--step--1);
+        cursor: pointer;
+      }
+      .tab-list label:hover {
+        background: var(--wash);
+      }
+      .tab-list input,
+      .demo-controls input[type='checkbox'],
+      .small input {
+        accent-color: var(--accent);
+      }
+      .favicon {
+        flex: none;
+        width: 14px;
+        height: 14px;
+        border-radius: 3px;
+        background: var(--rule-strong);
+      }
+      .tab-list .title {
+        flex: 1;
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .tab-list .host {
+        color: var(--ink-soft);
+        font-family: var(--mono);
+        font-size: 0.75rem;
+      }
+      .tag {
+        flex: none;
+        padding: 1px 8px;
+        border-radius: 999px;
+        background: var(--accent-tint);
+        color: var(--on-accent-tint);
+        font-size: 0.6875rem;
+        font-weight: 500;
+      }
+      .tag.flash {
+        animation: flash 900ms ease-out;
+      }
+      @keyframes flash {
+        from {
+          background: var(--accent);
+          color: var(--paper);
+        }
+      }
+      .demo-controls {
+        display: grid;
+        gap: 8px;
+        background: var(--wash);
+      }
+      .field {
+        display: grid;
+        grid-template-columns: 92px 72px minmax(0, 1fr);
+        gap: 6px;
+        align-items: center;
+        font-size: var(--step--1);
+      }
+      .demo input[type='number'],
+      .demo select {
+        width: 100%;
+        height: 32px;
+        padding: 0 8px;
+        border: 1px solid var(--rule-strong);
+        border-radius: var(--radius);
+        background: var(--paper);
+        color: var(--ink);
+        font: 400 var(--step--1) var(--body);
+      }
+      .demo input[type='number']:focus,
+      .demo select:focus {
+        border-color: var(--focus);
+        outline: none;
+        box-shadow: 0 0 0 1px var(--focus);
+      }
+      .demo input:disabled {
+        color: var(--ink-soft);
+        background: var(--wash);
+      }
+      .check {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: var(--step--1);
+      }
+      .summary {
+        min-height: 1.6em;
+        color: var(--ink-soft);
+        font-size: var(--step--1);
+      }
+      .btn {
+        height: 32px;
+        padding: 0 12px;
+        border: 1px solid var(--rule-strong);
+        border-radius: var(--radius);
+        background: var(--paper);
+        color: var(--ink);
+        font: 500 var(--step--1) var(--body);
+        cursor: pointer;
+      }
+      .btn.primary {
+        border-color: var(--ink);
+        background: var(--ink);
+        color: var(--paper);
+      }
+      .btn.link {
+        height: auto;
+        padding: 0;
+        border: 0;
+        background: none;
+        color: var(--accent);
+        font-size: 0.75rem;
+      }
+      .btn:disabled {
+        border-color: var(--rule);
+        background: var(--wash);
+        color: var(--ink-soft);
+        cursor: default;
+        opacity: 0.7;
+      }
+      .schedule-list li {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 2px 10px;
+        padding: 10px 12px;
+        border: 1px solid var(--rule);
+        border-radius: var(--radius);
+        font-size: var(--step--1);
+      }
+      .schedule-list li + li {
+        margin-top: 8px;
+      }
+      .schedule-list .tabs {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        font-weight: 600;
+      }
+      .schedule-list .meta {
+        grid-column: 1;
+        color: var(--ink-soft);
+        font-variant-numeric: tabular-nums;
+      }
+      .schedule-list .btn {
+        grid-column: 2;
+        grid-row: 1 / span 3;
+        align-self: center;
+        height: 28px;
+      }
+      .muted {
+        color: var(--ink-soft);
+        font-size: var(--step--1);
+      }
+      .demo-note {
+        padding: 8px 14px;
+        color: var(--ink-soft);
+        font-size: 0.75rem;
+        border-top: 1px solid var(--rule);
+      }
+
+      /* Sections */
+      section.block {
+        padding-block: 72px;
+        border-top: 1px solid var(--rule);
+      }
+      .section-head {
+        display: grid;
+        gap: 10px;
+        max-width: 40em;
+        margin-bottom: 40px;
+      }
+      .section-head h2 {
+        font: 600 var(--step-2) / 1.2 var(--display);
+        letter-spacing: -0.01em;
+      }
+      .section-head p {
+        color: var(--ink-soft);
+      }
+
+      /* Steps */
+      .steps {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 32px;
+        margin: 0;
+        padding: 0;
+        list-style: none;
+        counter-reset: step;
+      }
+      .steps li {
+        display: grid;
+        gap: 8px;
+        align-content: start;
+        counter-increment: step;
+      }
+      .steps li::before {
+        content: counter(step);
+        display: grid;
+        place-items: center;
+        width: 28px;
+        height: 28px;
+        border: 1px solid var(--rule-strong);
+        border-radius: 50%;
+        font: 500 var(--step--1) var(--mono);
+      }
+      .steps h3 {
+        font: 600 var(--step-0) var(--body);
+      }
+      .steps p {
+        color: var(--ink-soft);
+      }
+      .note {
+        margin-top: 32px;
+        color: var(--ink-soft);
+        font-size: var(--step--1);
+      }
+
+      /* Details list */
+      .details {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 32px 40px;
+        margin: 0;
+      }
+      .details div {
+        display: grid;
+        gap: 6px;
+        align-content: start;
+        padding-top: 14px;
+        border-top: 1px solid var(--rule);
+      }
+      .details dt {
+        font-weight: 600;
+      }
+      .details dd {
+        margin: 0;
+        color: var(--ink-soft);
+      }
+
+      /* Privacy */
+      .two-col {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+        gap: 40px;
+      }
+      .plain-list {
+        display: grid;
+        gap: 10px;
+        margin: 12px 0 0;
+        padding: 0;
+        list-style: none;
+      }
+      .plain-list li {
+        display: grid;
+        grid-template-columns: 18px minmax(0, 1fr);
+        gap: 10px;
+      }
+      .plain-list li::before {
+        content: '';
+        width: 8px;
+        height: 8px;
+        margin-top: 0.6em;
+        border-radius: 50%;
+        background: var(--ink-soft);
+      }
+      .plain-list.does li::before {
+        background: var(--accent);
+      }
+      .col-title {
+        font: 600 var(--step-0) var(--body);
+      }
+      .table-wrap {
+        overflow-x: auto;
+        margin-top: 48px;
+        border: 1px solid var(--rule);
+        border-radius: 10px;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.9375rem;
+      }
+      caption {
+        padding: 14px 16px 0;
+        color: var(--ink-soft);
+        font-size: var(--step--1);
+        text-align: left;
+      }
+      th,
+      td {
+        padding: 12px 16px;
+        text-align: left;
+        vertical-align: top;
+      }
+      thead th {
+        color: var(--ink-soft);
+        font-size: var(--step--1);
+        font-weight: 500;
+        border-bottom: 1px solid var(--rule);
+      }
+      tbody tr + tr td,
+      tbody tr + tr th {
+        border-top: 1px solid var(--rule);
+      }
+      tbody th {
+        font-weight: 500;
+        white-space: nowrap;
+      }
+      tbody th code {
+        font-weight: 400;
+      }
+
+      /* Install */
+      .install {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+        gap: 40px;
+      }
+      .install h3 {
+        font: 600 var(--step-0) var(--body);
+      }
+      .install p {
+        color: var(--ink-soft);
+      }
+      .install > div {
+        display: grid;
+        gap: 12px;
+        align-content: start;
+      }
+      .cta {
+        display: inline-flex;
+        align-items: center;
+        justify-self: start;
+        height: 40px;
+        padding: 0 16px;
+        border: 1px solid var(--ink);
+        border-radius: var(--radius);
+        background: var(--ink);
+        color: var(--paper);
+        font: 500 var(--step--1) var(--body);
+        text-decoration: none;
+      }
+      .cta:hover {
+        opacity: 0.9;
+      }
+
+      /* Footer */
+      .site-foot {
+        padding-block: 32px 48px;
+        border-top: 1px solid var(--rule);
+        color: var(--ink-soft);
+        font-size: var(--step--1);
+      }
+      .site-foot .wrap {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: space-between;
+        gap: 8px 24px;
+      }
+
+      @media (max-width: 860px) {
+        .hero .wrap,
+        .two-col,
+        .install {
+          grid-template-columns: minmax(0, 1fr);
+        }
+        .details,
+        .steps {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+        .hero {
+          padding-block: 40px 56px;
+        }
+      }
+      @media (max-width: 560px) {
+        .details,
+        .steps {
+          grid-template-columns: minmax(0, 1fr);
+        }
+        .site-head nav {
+          margin-left: 0;
+        }
+        section.block {
+          padding-block: 56px;
+        }
+        .field {
+          grid-template-columns: 84px 64px minmax(0, 1fr);
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .tag.flash {
+          animation: none;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header class="site-head">
+      <div class="wrap">
+        <a class="brand" href="#top" id="top"
+          ><img src="img/icon-96.png" alt="" width="26" height="26" />Scheduled Tab Reloader</a
+        >
+        <nav aria-label="Sections">
+          <a href="#how">How it works</a>
+          <a href="#details">Schedules</a>
+          <a href="#privacy">Privacy</a>
+          <a href="#install">Install</a>
+          <a href="https://github.com/BlueHarborWorks/scheduled-tab-reloader">Source</a>
+        </nav>
+      </div>
+    </header>
+
+    <main>
+      <section class="hero" aria-labelledby="hero-title">
+        <div class="wrap">
+          <div>
+            <p class="eyebrow">Browser extension for Firefox</p>
+            <h1 id="hero-title">Reload a tab every <span class="shift">two minutes</span> for two hours.</h1>
+            <p class="lede">
+              Pick the tabs, set how often they reload and for how long, and press Start. The schedule counts down
+              in the toolbar popup and stops on its own when the time is up.
+            </p>
+            <div class="status">
+              <span class="chip">Version 1.0.2</span>
+              <a href="https://addons.mozilla.org/firefox/addon/scheduled-tab-reloader/">Get it from Firefox Add-ons</a>
+            </div>
+          </div>
+
+          <div class="demo" role="group" aria-labelledby="demo-title">
+            <div class="demo-bar">
+              <span id="demo-title">Try it: a working copy of the popup</span>
+              <span>Sample tabs</span>
+            </div>
+
+            <div class="demo-section">
+              <div class="demo-head">
+                <h3>Tabs to reload</h3>
+                <label class="small"><input type="checkbox" id="demo-all" /> All in window</label>
+              </div>
+              <ul class="tab-list" id="demo-tabs"></ul>
+            </div>
+
+            <div class="demo-section demo-controls">
+              <label class="field">
+                <span>Reload every</span>
+                <input type="number" id="demo-interval" min="10" step="1" value="10" />
+                <select id="demo-interval-unit" aria-label="Interval unit">
+                  <option value="1000" selected>seconds</option>
+                  <option value="60000">minutes</option>
+                  <option value="3600000">hours</option>
+                </select>
+              </label>
+              <label class="field">
+                <span>For</span>
+                <input type="number" id="demo-duration" min="1" step="1" value="1" />
+                <select id="demo-duration-unit" aria-label="Duration unit">
+                  <option value="60000" selected>minutes</option>
+                  <option value="3600000">hours</option>
+                  <option value="86400000">days</option>
+                  <option value="forever">until I stop it</option>
+                </select>
+              </label>
+              <label class="check"><input type="checkbox" id="demo-bypass" /> Bypass cache (hard reload)</label>
+              <p class="summary" id="demo-summary" aria-live="polite"></p>
+              <button type="button" class="btn primary" id="demo-start">Start</button>
+            </div>
+
+            <div class="demo-section">
+              <div class="demo-head">
+                <h3>Active schedules</h3>
+                <button type="button" class="btn link" id="demo-stop-all" hidden>Stop all</button>
+              </div>
+              <ul class="schedule-list" id="demo-schedules" aria-live="polite"></ul>
+              <p class="muted" id="demo-empty">Nothing scheduled.</p>
+            </div>
+            <p class="demo-note">
+              The sample tabs are not real pages. In Firefox the extension reloads the tabs you tick in the current
+              window.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <section class="block" id="how" aria-labelledby="how-title">
+        <div class="wrap">
+          <div class="section-head">
+            <h2 id="how-title">Three choices, then it runs by itself</h2>
+            <p>Everything happens in the toolbar popup. There is no settings page and nothing to configure first.</p>
+          </div>
+          <ol class="steps">
+            <li>
+              <h3>Pick the tabs</h3>
+              <p>
+                The popup lists the tabs in the current window with the one you are on already ticked. Tick more, or
+                choose all of them.
+              </p>
+            </li>
+            <li>
+              <h3>Set the interval and the duration</h3>
+              <p>
+                Reload every so many seconds, minutes or hours, for a number of minutes, hours or days, or until you
+                stop it. The popup tells you how many reloads that is and when it will end.
+              </p>
+            </li>
+            <li>
+              <h3>Let it stop on its own</h3>
+              <p>
+                Each schedule shows its next reload and how many are left. It ends when the count is reached, when
+                every tab in it is closed, or when you press Stop.
+              </p>
+            </li>
+          </ol>
+          <p class="note">
+            The toolbar badge shows how many schedules are running. Schedules end when Firefox closes, because tab
+            ids do not survive a restart.
+          </p>
+        </div>
+      </section>
+
+      <section class="block" id="details" aria-labelledby="details-title">
+        <div class="wrap">
+          <div class="section-head">
+            <h2 id="details-title">What a schedule can do</h2>
+            <p>A schedule is a set of tabs, an interval, and an end: a reload count or "until stopped".</p>
+          </div>
+          <dl class="details">
+            <div>
+              <dt>Several tabs at once</dt>
+              <dd>One schedule can reload any number of tabs on the same interval. Start another for a different
+                interval.</dd>
+            </div>
+            <div>
+              <dt>From 10 seconds to hours</dt>
+              <dd>The interval can be any number of seconds, minutes or hours, with a minimum of 10 seconds.</dd>
+            </div>
+            <div>
+              <dt>Timed, or until stopped</dt>
+              <dd>
+                "Every 2 minutes for 2 hours" means exactly 60 reloads, counted rather than clocked, so small timer
+                drift does not add or drop one.
+              </dd>
+            </div>
+            <div>
+              <dt>Hard reload</dt>
+              <dd>Tick Bypass cache to fetch the page fresh from the server on every reload.</dd>
+            </div>
+            <div>
+              <dt>One schedule per tab</dt>
+              <dd>Starting a new schedule that includes a scheduled tab moves that tab to the new one. A tab is never
+                reloaded twice per tick.</dd>
+            </div>
+            <div>
+              <dt>Closed tabs drop out</dt>
+              <dd>Closing a tab removes it from its schedule. When the last tab in a schedule is closed, the schedule
+                ends.</dd>
+            </div>
+            <div>
+              <dt>Sleep-safe</dt>
+              <dd>
+                If the computer sleeps, the missed reloads are not replayed in a burst, and a timed schedule does not
+                run on long past the time you chose.
+              </dd>
+            </div>
+            <div>
+              <dt>Remembers the last settings</dt>
+              <dd>The interval, duration and cache choice you used last time are filled in the next time you open the
+                popup.</dd>
+            </div>
+            <div>
+              <dt>Light and dark</dt>
+              <dd>The popup follows the Firefox theme.</dd>
+            </div>
+          </dl>
+        </div>
+      </section>
+
+      <section class="block" id="privacy" aria-labelledby="privacy-title">
+        <div class="wrap">
+          <div class="section-head">
+            <h2 id="privacy-title">What it touches, and what it leaves alone</h2>
+            <p>
+              Scheduled Tab Reloader reloads tabs and nothing else. It cannot see the pages it reloads, and it sends
+              nothing anywhere.
+            </p>
+          </div>
+          <div class="two-col">
+            <div>
+              <h3 class="col-title">Does</h3>
+              <ul class="plain-list does">
+                <li>Read tab titles and addresses, to show them in the picker</li>
+                <li>Reload the tabs you tick, on the interval you set</li>
+                <li>Keep active schedules in Firefox session storage, and your last-used settings in local storage</li>
+              </ul>
+            </div>
+            <div>
+              <h3 class="col-title">Does not</h3>
+              <ul class="plain-list">
+                <li>Read or change the content of any web page: it asks for no site access and injects no scripts</li>
+                <li>Make network requests of its own, load remote code, or require an account</li>
+                <li>Collect, store or send any data about you: no analytics, telemetry or tracking</li>
+                <li>Keep anything after Firefox closes, apart from the form values you used last</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="table-wrap">
+            <table>
+              <caption>
+                Browser permissions Scheduled Tab Reloader asks for
+              </caption>
+              <thead>
+                <tr>
+                  <th scope="col">Permission</th>
+                  <th scope="col">When</th>
+                  <th scope="col">Why</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <th scope="row"><code>tabs</code></th>
+                  <td>At install</td>
+                  <td>Lists tab titles in the picker and reloads only the tabs you select.</td>
+                </tr>
+                <tr>
+                  <th scope="row"><code>alarms</code></th>
+                  <td>At install</td>
+                  <td>Schedules each reload without keeping a background timer running.</td>
+                </tr>
+                <tr>
+                  <th scope="row"><code>storage</code></th>
+                  <td>At install</td>
+                  <td>Keeps active schedules for the session and the last-used form values on this device.</td>
+                </tr>
+                <tr>
+                  <th scope="row">Site access</th>
+                  <td>Never</td>
+                  <td>Not requested. The extension cannot read or modify the pages you visit.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <p class="note">
+            The listing on Firefox Add-ons declares that no data is collected. The full text is in the project's
+            <a href="https://github.com/BlueHarborWorks/scheduled-tab-reloader/blob/main/PRIVACY.md">PRIVACY.md</a>.
+          </p>
+        </div>
+      </section>
+
+      <section class="block" id="install" aria-labelledby="install-title">
+        <div class="wrap">
+          <div class="section-head">
+            <h2 id="install-title">Install</h2>
+            <p>Requires Firefox 140 or later on desktop.</p>
+          </div>
+          <div class="install">
+            <div>
+              <h3>From Firefox Add-ons</h3>
+              <p>The signed, reviewed build. Updates arrive through Firefox like any other extension.</p>
+              <a class="cta" href="https://addons.mozilla.org/firefox/addon/scheduled-tab-reloader/">Add to Firefox</a>
+            </div>
+            <div>
+              <h3>From source, for a look at the code</h3>
+              <p>
+                The <a href="https://github.com/BlueHarborWorks/scheduled-tab-reloader">repository</a> is plain
+                JavaScript with no build step. Open
+                <code>about:debugging#/runtime/this-firefox</code>, choose Load Temporary Add-on, and pick
+                <code>extension/manifest.json</code>. To run the tests and the Mozilla linter:
+              </p>
+              <pre>npm install
+npm test
+npm run lint</pre>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-foot">
+      <div class="wrap">
+        <span>Scheduled Tab Reloader 1.0.2 · MIT License · Blue Harbor Works</span>
+        <span>Requires Firefox 140 or later.</span>
+      </div>
+    </footer>
+
+    <script>
+      (() => {
+        // The demo follows the extension's own rules: a 10 second minimum interval,
+        // a duration of at least one interval, one schedule per tab, and a reload
+        // count derived from duration / interval.
+        const MIN_INTERVAL_MS = 10 * 1000;
+        const SAMPLE_TABS = [
+          { id: 1, title: 'Build #4821 · Pipeline', host: 'ci.example.com' },
+          { id: 2, title: 'Order queue', host: 'ops.example.com' },
+          { id: 3, title: 'Live scores', host: 'scores.example.com' },
+          { id: 4, title: 'Weather radar', host: 'weather.example.com' },
+        ];
+
+        const $ = (id) => document.getElementById(id);
+        const tabList = $('demo-tabs');
+        const scheduleList = $('demo-schedules');
+        const empty = $('demo-empty');
+        const summary = $('demo-summary');
+        const startButton = $('demo-start');
+        const stopAllButton = $('demo-stop-all');
+        const allBox = $('demo-all');
+        const fields = ['demo-interval', 'demo-interval-unit', 'demo-duration', 'demo-duration-unit'];
+
+        const schedules = new Map();
+        const lastReload = new Map(); // tab id -> timestamp of the last simulated reload
+        let nextId = 1;
+
+        const plural = (n, word) => (n === 1 ? word : `${n} ${word}s`);
+        function formatInterval(ms) {
+          if (ms % 3600000 === 0) return plural(ms / 3600000, 'hour');
+          if (ms % 60000 === 0) return plural(ms / 60000, 'minute');
+          return plural(Math.round(ms / 1000), 'second');
+        }
+        function formatDuration(ms) {
+          const s = Math.max(0, Math.round(ms / 1000));
+          const h = Math.floor(s / 3600);
+          const m = Math.floor((s % 3600) / 60);
+          const sec = s % 60;
+          if (h) return `${h}h ${String(m).padStart(2, '0')}m`;
+          if (m) return `${m}m ${String(sec).padStart(2, '0')}s`;
+          return `${sec}s`;
+        }
+        const formatClock = (ts) => new Date(ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+        function scheduledTab(tabId) {
+          for (const s of schedules.values()) if (s.tabIds.includes(tabId)) return s;
+          return null;
+        }
+
+        function el(tag, props = {}, children = []) {
+          const node = document.createElement(tag);
+          Object.assign(node, props);
+          for (const c of children) node.append(c);
+          return node;
+        }
+
+        function renderTabs(preserve) {
+          const checked = preserve
+            ? new Set([...tabList.querySelectorAll('input:checked')].map((i) => Number(i.value)))
+            : new Set([1]);
+          tabList.replaceChildren();
+          for (const tab of SAMPLE_TABS) {
+            const box = el('input', { type: 'checkbox', value: String(tab.id), checked: checked.has(tab.id) });
+            box.addEventListener('change', () => {
+              syncAll();
+              updateSummary();
+            });
+            const children = [
+              box,
+              el('span', { className: 'favicon' }),
+              el('span', { className: 'title', textContent: tab.title }),
+              el('span', { className: 'host', textContent: tab.host }),
+            ];
+            if (scheduledTab(tab.id)) {
+              const tag = el('span', { className: 'tag', textContent: 'scheduled' });
+              tag.dataset.tab = tab.id;
+              children.push(tag);
+            }
+            tabList.append(el('li', {}, [el('label', {}, children)]));
+          }
+          syncAll();
+        }
+
+        function syncAll() {
+          const boxes = [...tabList.querySelectorAll('input')];
+          allBox.checked = boxes.length > 0 && boxes.every((b) => b.checked);
+        }
+
+        function readForm() {
+          const intervalMs = Number($('demo-interval').value) * Number($('demo-interval-unit').value);
+          const unit = $('demo-duration-unit').value;
+          const durationMs = unit === 'forever' ? null : Number($('demo-duration').value) * Number(unit);
+          const tabIds = [...tabList.querySelectorAll('input:checked')].map((i) => Number(i.value));
+          return { tabIds, intervalMs, durationMs, bypassCache: $('demo-bypass').checked };
+        }
+
+        function validate({ tabIds, intervalMs, durationMs }) {
+          if (tabIds.length === 0) return 'Select at least one tab.';
+          if (!(intervalMs >= MIN_INTERVAL_MS)) return 'The interval must be at least 10 seconds.';
+          if (durationMs != null && !(durationMs >= intervalMs)) return 'The duration must be at least one interval long.';
+          return null;
+        }
+
+        function updateSummary() {
+          const form = readForm();
+          const error = validate(form);
+          $('demo-duration').disabled = $('demo-duration-unit').value === 'forever';
+          $('demo-interval').min = $('demo-interval-unit').value === '1000' ? '10' : '1';
+          startButton.disabled = !!error;
+          if (error) {
+            summary.textContent = error;
+            return;
+          }
+          const what = form.tabIds.length === 1 ? '1 tab' : `${form.tabIds.length} tabs`;
+          if (form.durationMs == null) {
+            summary.textContent = `Reloads ${what} every ${formatInterval(form.intervalMs)} until stopped.`;
+          } else {
+            const count = Math.floor(form.durationMs / form.intervalMs);
+            summary.textContent =
+              `Reloads ${what} every ${formatInterval(form.intervalMs)}, ${count} time${count === 1 ? '' : 's'}, ` +
+              `ending around ${formatClock(Date.now() + form.durationMs)}.`;
+          }
+        }
+
+        function start() {
+          const form = readForm();
+          if (validate(form)) return;
+          // One schedule per tab: the newest wins.
+          for (const s of schedules.values()) {
+            s.tabIds = s.tabIds.filter((t) => !form.tabIds.includes(t));
+            if (s.tabIds.length === 0) schedules.delete(s.id);
+          }
+          const now = Date.now();
+          const id = nextId++;
+          schedules.set(id, {
+            id,
+            tabIds: [...form.tabIds],
+            intervalMs: form.intervalMs,
+            startedAt: now,
+            endAt: form.durationMs == null ? null : now + form.durationMs,
+            totalReloads: form.durationMs == null ? null : Math.floor(form.durationMs / form.intervalMs),
+            nextAt: now + form.intervalMs,
+            reloads: 0,
+            bypassCache: form.bypassCache,
+          });
+          renderTabs(true);
+          renderSchedules();
+          updateSummary();
+        }
+
+        function stop(id) {
+          schedules.delete(id);
+          renderTabs(true);
+          renderSchedules();
+        }
+
+        function renderSchedules() {
+          scheduleList.replaceChildren();
+          const items = [...schedules.values()].sort((a, b) => a.startedAt - b.startedAt);
+          empty.hidden = items.length > 0;
+          stopAllButton.hidden = items.length < 2;
+          const now = Date.now();
+          for (const s of items) {
+            const names = s.tabIds.map((t) => SAMPLE_TABS.find((x) => x.id === t).title);
+            const label = names.length === 1 ? names[0] : `${names.length} tabs: ${names.join(', ')}`;
+            const ends =
+              s.endAt == null ? 'until stopped' : `ends ${formatClock(s.endAt)} (${formatDuration(s.endAt - now)} left)`;
+            const next = s.nextAt - now < 1000 ? 'Next reload now.' : `Next reload in ${formatDuration(s.nextAt - now)}.`;
+            const stopButton = el('button', { type: 'button', className: 'btn', textContent: 'Stop' });
+            stopButton.addEventListener('click', () => stop(s.id));
+            scheduleList.append(
+              el('li', {}, [
+                el('span', { className: 'tabs', textContent: label, title: names.join('\n') }),
+                stopButton,
+                el('span', {
+                  className: 'meta',
+                  textContent: `Every ${formatInterval(s.intervalMs)}${s.bypassCache ? ', hard reload' : ''}, ${ends}`,
+                }),
+                el('span', {
+                  className: 'meta',
+                  textContent:
+                    `${next} Reloaded ${s.reloads}` +
+                    (s.totalReloads != null ? ` of ${s.totalReloads} times.` : ` time${s.reloads === 1 ? '' : 's'}.`),
+                }),
+              ]),
+            );
+          }
+        }
+
+        // The clock: one tick a second, like the popup's own refresh.
+        function tick() {
+          const now = Date.now();
+          let changed = false;
+          for (const s of [...schedules.values()]) {
+            if (now < s.nextAt) continue;
+            s.reloads += 1;
+            s.nextAt += s.intervalMs;
+            for (const t of s.tabIds) {
+              lastReload.set(t, now);
+              const tag = tabList.querySelector(`.tag[data-tab="${t}"]`);
+              if (tag) {
+                tag.textContent = `reloaded ${new Date(now).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}`;
+                tag.classList.remove('flash');
+                void tag.offsetWidth;
+                tag.classList.add('flash');
+              }
+            }
+            if (s.totalReloads != null && s.reloads >= s.totalReloads) {
+              schedules.delete(s.id);
+              changed = true;
+            }
+          }
+          if (changed) renderTabs(true);
+          renderSchedules();
+        }
+
+        allBox.addEventListener('change', () => {
+          for (const b of tabList.querySelectorAll('input')) b.checked = allBox.checked;
+          updateSummary();
+        });
+        for (const id of fields) $(id).addEventListener('input', updateSummary);
+        startButton.addEventListener('click', start);
+        stopAllButton.addEventListener('click', () => {
+          schedules.clear();
+          renderTabs(true);
+          renderSchedules();
+        });
+        document.querySelector('.demo-controls').addEventListener('keydown', (e) => {
+          if (e.key === 'Enter' && e.target.tagName !== 'BUTTON') {
+            e.preventDefault();
+            start();
+          }
+        });
+
+        renderTabs(false);
+        renderSchedules();
+        updateSummary();
+        setInterval(tick, 1000);
+      })();
+    </script>
+  </body>
+</html>

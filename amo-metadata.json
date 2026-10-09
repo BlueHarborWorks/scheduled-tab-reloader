@@ -1,6 +1,6 @@
 {
   "categories": { "firefox": ["tabs"] },
-  "summary": { "en-US": "Privacy-first scheduled tab reloading—without reading website content, tracking users, or collecting data." },
+  "summary": { "en-US": "Privacy-first scheduled tab reloading, without reading website content, tracking users, or collecting data." },
   "description": { "en-US": "Privacy-first tab reloading, with no access to the contents of the websites you visit.\n\nPick one or more tabs in the current window, set how often they reload (seconds, minutes or hours) and for how long (minutes, hours, days, or until you stop it). The popup shows each active schedule with the next reload time, how many reloads are left, and a Stop button.\n\nOptions: hard reload (bypass cache), select all tabs in the window. Closing a tab removes it from its schedule. Schedules end when the browser closes.\n\nPrivacy by design:\n- Does not read or modify website content\n- Does not request host permissions or inject scripts into pages\n- No analytics, tracking, data collection, remote code, or network requests of its own\n- Schedules and settings stay in Firefox\n\nThe extension uses only the permissions needed for its core job: tabs to show tab titles and reload selected tabs, alarms to schedule reloads, and storage to keep schedules and form settings locally." },
   "version": { "license": "MIT" }
 }

@@ -1,6 +1,6 @@
 {
   "name": "scheduled-tab-reloader",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "private": true,
   "description": "Privacy-first Firefox extension for reloading selected tabs on a schedule.",
   "scripts": {
