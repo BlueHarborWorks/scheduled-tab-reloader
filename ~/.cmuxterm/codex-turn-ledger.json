@@ -1,0 +1,41 @@
+{
+  "records" : {
+    "01a121e6-a274-7bd2-9044-c803000dc383" : {
+      "activeChildrenByTurn" : {
+
+      },
+      "activeTurnID" : "01a121ea-c3fe-7dc1-a68c-553751def5fc",
+      "notifiedTurnIDs" : [
+        "01a121e6-a355-7273-a81e-ea68dc5afafc",
+        "01a121ea-c3fe-7dc1-a68c-553751def5fc"
+      ],
+      "owner" : {
+        "generation" : {
+          "pid" : 67326,
+          "startMicroseconds" : 213003,
+          "startSeconds" : 1791570062
+        },
+        "pid" : 67326
+      },
+      "pendingTurns" : {
+
+      },
+      "settledTurnIDs" : [
+        "01a121e6-a355-7273-a81e-ea68dc5afafc",
+        "01a121ea-c3fe-7dc1-a68c-553751def5fc"
+      ],
+      "surfaceID" : "938C73A5-894C-4FC7-81CC-2B887E893EF9",
+      "terminalChildrenByTurn" : {
+
+      },
+      "unknownChildrenByTurn" : {
+
+      },
+      "updatedAt" : 1791570466.4537768,
+      "workspaceID" : "831A87D6-701F-4964-ADDD-A62BF50EAFFF"
+    }
+  },
+  "surfaceOwners" : {
+    "938C73A5-894C-4FC7-81CC-2B887E893EF9" : "01a121e6-a274-7bd2-9044-c803000dc383"
+  }
+}
