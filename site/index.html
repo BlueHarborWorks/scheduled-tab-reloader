@@ -662,8 +662,9 @@
         display: inline-flex;
         align-items: center;
         justify-self: start;
+        gap: 8px;
         height: 40px;
-        padding: 0 16px;
+        padding: 0 16px 0 12px;
         border: 1px solid var(--ink);
         border-radius: var(--radius);
         background: var(--ink);
@@ -673,6 +674,11 @@
       }
       .cta:hover {
         opacity: 0.9;
+      }
+      .cta img {
+        flex: none;
+        width: 20px;
+        height: 20px;
       }
       .install .get {
         margin-top: 4px;
@@ -684,6 +690,10 @@
         border-top: 1px solid var(--rule);
         color: var(--ink-soft);
         font-size: var(--step--1);
+      }
+      .site-foot .tm {
+        flex-basis: 100%;
+        font-size: 0.75rem;
       }
       .site-foot .wrap {
         display: flex;
@@ -755,11 +765,11 @@
               in the toolbar popup and stops on its own when the time is up.
             </p>
             <div class="get">
-              <a class="cta" href="https://addons.mozilla.org/firefox/addon/scheduled-tab-reloader/">Add to Firefox</a>
+              <a class="cta" href="https://addons.mozilla.org/firefox/addon/scheduled-tab-reloader/"><img src="img/firefox.svg" alt="" width="20" height="20" />Add to Firefox</a>
               <a
                 class="cta"
                 href="https://chromewebstore.google.com/detail/scheduled-tab-reloader/jhlddaodljdnbpahmfloghgojmgcgpli"
-                >Add to Chrome</a
+                ><img src="img/chrome.svg" alt="" width="20" height="20" />Add to Chrome</a
               >
             </div>
             <div class="status">
@@ -1005,11 +1015,11 @@
               <h3>From Firefox Add-ons or the Chrome Web Store</h3>
               <p>The signed, reviewed builds. Updates arrive through the browser like any other extension.</p>
               <div class="get">
-                <a class="cta" href="https://addons.mozilla.org/firefox/addon/scheduled-tab-reloader/">Add to Firefox</a>
+                <a class="cta" href="https://addons.mozilla.org/firefox/addon/scheduled-tab-reloader/"><img src="img/firefox.svg" alt="" width="20" height="20" />Add to Firefox</a>
                 <a
                   class="cta"
                   href="https://chromewebstore.google.com/detail/scheduled-tab-reloader/jhlddaodljdnbpahmfloghgojmgcgpli"
-                  >Add to Chrome</a
+                  ><img src="img/chrome.svg" alt="" width="20" height="20" />Add to Chrome</a
                 >
               </div>
             </div>
@@ -1041,6 +1051,7 @@ npm run lint</pre>
           ></span
         >
         <span>Requires Firefox 140 or later, or Chrome 120 or later.</span>
+        <span class="tm">Firefox is a trademark of the Mozilla Foundation. Chrome is a trademark of Google LLC.</span>
       </div>
     </footer>
 
