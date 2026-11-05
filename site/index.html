@@ -6,7 +6,7 @@
     <title>Scheduled Tab Reloader</title>
     <meta
       name="description"
-      content="Scheduled Tab Reloader is a Firefox extension that reloads the tabs you choose on a schedule, for example every 2 minutes for 2 hours, and stops on its own."
+      content="Scheduled Tab Reloader is an extension for Firefox and Chrome that reloads the tabs you choose on a schedule, for example every 2 minutes for 2 hours, and stops on its own."
     />
     <link rel="icon" type="image/png" href="img/icon-32.png" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -256,6 +256,15 @@
         height: 7px;
         border-radius: 50%;
         background: var(--accent);
+      }
+      .get {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-top: 28px;
+      }
+      .get + .status {
+        margin-top: 18px;
       }
 
       /* Demo: a working copy of the popup */
@@ -665,6 +674,9 @@
       .cta:hover {
         opacity: 0.9;
       }
+      .install .get {
+        margin-top: 4px;
+      }
 
       /* Footer */
       .site-foot {
@@ -736,15 +748,23 @@
       <section class="hero" aria-labelledby="hero-title">
         <div class="wrap">
           <div>
-            <p class="eyebrow">Browser extension for Firefox</p>
+            <p class="eyebrow">Browser extension for Firefox and Chrome</p>
             <h1 id="hero-title">Reload a tab every <span class="shift">two minutes</span> for two hours.</h1>
             <p class="lede">
               Pick the tabs, set how often they reload and for how long, and press Start. The schedule counts down
               in the toolbar popup and stops on its own when the time is up.
             </p>
+            <div class="get">
+              <a class="cta" href="https://addons.mozilla.org/firefox/addon/scheduled-tab-reloader/">Add to Firefox</a>
+              <a
+                class="cta"
+                href="https://chromewebstore.google.com/detail/scheduled-tab-reloader/jhlddaodljdnbpahmfloghgojmgcgpli"
+                >Add to Chrome</a
+              >
+            </div>
             <div class="status">
-              <span class="chip">Version 1.0.2</span>
-              <a href="https://addons.mozilla.org/firefox/addon/scheduled-tab-reloader/">Get it from Firefox Add-ons</a>
+              <span class="chip">Version 1.1</span>
+              <span>Free and open source, from Firefox Add-ons and the Chrome Web Store.</span>
             </div>
           </div>
 
@@ -796,8 +816,8 @@
               <p class="muted" id="demo-empty">Nothing scheduled.</p>
             </div>
             <p class="demo-note">
-              The sample tabs are not real pages. In Firefox the extension reloads the tabs you tick in the current
-              window.
+              The sample tabs are not real pages. The extension reloads the tabs you tick in the current window. The
+              demo uses the Firefox minimum of 10 seconds; in Chrome the minimum is 30 seconds.
             </p>
           </div>
         </div>
@@ -833,7 +853,7 @@
             </li>
           </ol>
           <p class="note">
-            The toolbar badge shows how many schedules are running. Schedules end when Firefox closes, because tab
+            The toolbar badge shows how many schedules are running. Schedules end when the browser closes, because tab
             ids do not survive a restart.
           </p>
         </div>
@@ -852,8 +872,11 @@
                 interval.</dd>
             </div>
             <div>
-              <dt>From 10 seconds to hours</dt>
-              <dd>The interval can be any number of seconds, minutes or hours, with a minimum of 10 seconds.</dd>
+              <dt>From seconds to hours</dt>
+              <dd>
+                The interval can be any number of seconds, minutes or hours. The minimum is 10 seconds in Firefox and 30
+                seconds in Chrome, which does not fire extension alarms more often.
+              </dd>
             </div>
             <div>
               <dt>Timed, or until stopped</dt>
@@ -890,7 +913,7 @@
             </div>
             <div>
               <dt>Light and dark</dt>
-              <dd>The popup follows the Firefox theme.</dd>
+              <dd>The popup follows the light or dark setting of your system and browser.</dd>
             </div>
           </dl>
         </div>
@@ -911,7 +934,7 @@
               <ul class="plain-list does">
                 <li>Read tab titles and addresses, to show them in the picker</li>
                 <li>Reload the tabs you tick, on the interval you set</li>
-                <li>Keep active schedules in Firefox session storage, and your last-used settings in local storage</li>
+                <li>Keep active schedules in the browser's session storage, and your last-used settings in local storage</li>
               </ul>
             </div>
             <div>
@@ -920,7 +943,7 @@
                 <li>Read or change the content of any web page: it asks for no site access and injects no scripts</li>
                 <li>Make network requests of its own, load remote code, or require an account</li>
                 <li>Collect, store or send any data about you: no analytics, telemetry or tracking</li>
-                <li>Keep anything after Firefox closes, apart from the form values you used last</li>
+                <li>Keep anything after the browser closes, apart from the form values you used last</li>
               </ul>
             </div>
           </div>
@@ -962,7 +985,10 @@
             </table>
           </div>
           <p class="note">
-            The listing on Firefox Add-ons declares that no data is collected. The full text is in the project's
+            The Firefox Add-ons listing declares that no data is collected. Chrome Web Store listings disclose any data
+            an extension handles, including data that never leaves the device, so the Chrome listing names web history:
+            the tab titles and addresses shown in the picker, which are not stored or sent. The full text is in the
+            project's
             <a href="https://github.com/BlueHarborWorks/scheduled-tab-reloader/blob/main/PRIVACY.md">PRIVACY.md</a>.
           </p>
         </div>
@@ -972,21 +998,29 @@
         <div class="wrap">
           <div class="section-head">
             <h2 id="install-title">Install</h2>
-            <p>Requires Firefox 140 or later on desktop.</p>
+            <p>Requires Firefox 140 or later on desktop, or Chrome 120 or later.</p>
           </div>
           <div class="install">
             <div>
-              <h3>From Firefox Add-ons</h3>
-              <p>The signed, reviewed build. Updates arrive through Firefox like any other extension.</p>
-              <a class="cta" href="https://addons.mozilla.org/firefox/addon/scheduled-tab-reloader/">Add to Firefox</a>
+              <h3>From Firefox Add-ons or the Chrome Web Store</h3>
+              <p>The signed, reviewed builds. Updates arrive through the browser like any other extension.</p>
+              <div class="get">
+                <a class="cta" href="https://addons.mozilla.org/firefox/addon/scheduled-tab-reloader/">Add to Firefox</a>
+                <a
+                  class="cta"
+                  href="https://chromewebstore.google.com/detail/scheduled-tab-reloader/jhlddaodljdnbpahmfloghgojmgcgpli"
+                  >Add to Chrome</a
+                >
+              </div>
             </div>
             <div>
               <h3>From source, for a look at the code</h3>
               <p>
                 The <a href="https://github.com/BlueHarborWorks/scheduled-tab-reloader">repository</a> is plain
-                JavaScript with no build step. Open
-                <code>about:debugging#/runtime/this-firefox</code>, choose Load Temporary Add-on, and pick
-                <code>extension/manifest.json</code>. To run the tests and the Mozilla linter:
+                JavaScript with no bundler. In Firefox, open <code>about:debugging#/runtime/this-firefox</code>, choose
+                Load Temporary Add-on, and pick <code>extension/manifest.json</code>. In Chrome, run
+                <code>npm run build:chrome</code>, open <code>chrome://extensions</code>, turn on Developer mode, choose
+                Load unpacked, and pick <code>dist/chrome-mv3</code>. To run the tests and the Mozilla linter:
               </p>
               <pre>npm install
 npm test
@@ -999,14 +1033,20 @@ npm run lint</pre>
 
     <footer class="site-foot">
       <div class="wrap">
-        <span>Scheduled Tab Reloader 1.0.2 · MIT License · Blue Harbor Works</span>
-        <span>Requires Firefox 140 or later.</span>
+        <span
+          >Scheduled Tab Reloader 1.1.0 · MIT License · Blue Harbor Works ·
+          <a href="https://addons.mozilla.org/firefox/addon/scheduled-tab-reloader/">Firefox Add-ons</a> ·
+          <a href="https://chromewebstore.google.com/detail/scheduled-tab-reloader/jhlddaodljdnbpahmfloghgojmgcgpli"
+            >Chrome Web Store</a
+          ></span
+        >
+        <span>Requires Firefox 140 or later, or Chrome 120 or later.</span>
       </div>
     </footer>
 
     <script>
       (() => {
-        // The demo follows the extension's own rules: a 10 second minimum interval,
+        // The demo follows the extension's own rules: a 10 second minimum interval (Firefox's; Chrome's is 30),
         // a duration of at least one interval, one schedule per tab, and a reload
         // count derived from duration / interval.
         const MIN_INTERVAL_MS = 10 * 1000;

@@ -4,7 +4,7 @@ A privacy-first Firefox and Chrome extension for reloading selected tabs on a sc
 the interval and duration, for example every 2 minutes for 2 hours, and the schedule
 stops automatically when it is done.
 
-[Install from Firefox Add-ons](https://addons.mozilla.org/firefox/addon/scheduled-tab-reloader/) · [Landing page](https://blueharborworks.github.io/scheduled-tab-reloader/)
+[Install from Firefox Add-ons](https://addons.mozilla.org/firefox/addon/scheduled-tab-reloader/) · [Install from the Chrome Web Store](https://chromewebstore.google.com/detail/scheduled-tab-reloader/jhlddaodljdnbpahmfloghgojmgcgpli) · [Landing page](https://blueharborworks.github.io/scheduled-tab-reloader/)
 
 ## Privacy by design
 

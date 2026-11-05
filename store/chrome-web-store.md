@@ -3,6 +3,9 @@
 Everything needed to submit Scheduled Tab Reloader in the Chrome Web Store Developer Dashboard
 (https://chrome.google.com/webstore/devconsole). Text in code blocks is meant to be pasted as-is.
 
+Published listing (item ID `jhlddaodljdnbpahmfloghgojmgcgpli`, first published 2026-11-04 as 1.1.0):
+https://chromewebstore.google.com/detail/scheduled-tab-reloader/jhlddaodljdnbpahmfloghgojmgcgpli
+
 ## Before you start
 
 - The privacy policy URL below must show the current `PRIVACY.md`, so it has to be on `main` on GitHub.
