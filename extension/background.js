@@ -1,10 +1,15 @@
-// Scheduled Tab Reloader: background event page.
+// Scheduled Tab Reloader: background event page (Firefox) or service worker (Chrome).
 // Each schedule owns one periodic alarm ("reload:<id>"). Schedules live in
 // storage.session, so they survive the event page being suspended but are
 // cleared when the browser restarts (tab ids are not stable across restarts).
 
+// Chrome exposes the same promise-based API as `chrome`.
+globalThis.browser ??= globalThis.chrome;
+
 const ALARM_PREFIX = "reload:";
-const MIN_INTERVAL_MS = 10 * 1000;
+// Chrome does not fire alarms more often than every 30 seconds in a published
+// extension; Firefox has no such floor. runtime.getBrowserInfo is Firefox-only.
+const MIN_INTERVAL_MS = typeof browser.runtime.getBrowserInfo === "function" ? 10 * 1000 : 30 * 1000;
 const BADGE_COLOR = "#2563eb";
 
 // Serialize every read-modify-write of the schedule store: alarms for several
@@ -57,7 +62,7 @@ async function startSchedule({ tabIds, intervalMs, durationMs, bypassCache }) {
     throw new Error("Select at least one tab.");
   }
   if (!Number.isFinite(intervalMs) || intervalMs < MIN_INTERVAL_MS) {
-    throw new Error("The interval must be at least 10 seconds.");
+    throw new Error(`The interval must be at least ${MIN_INTERVAL_MS / 1000} seconds.`);
   }
   if (durationMs != null && (!Number.isFinite(durationMs) || durationMs < intervalMs)) {
     throw new Error("The duration must be at least one interval long.");
@@ -224,9 +229,13 @@ async function resetState() {
 
 browser.alarms.onAlarm.addListener(onAlarm);
 browser.tabs.onRemoved.addListener(onTabRemoved);
-browser.runtime.onMessage.addListener((msg) =>
-  onMessage(msg).catch((err) => ({ ok: false, error: err.message }))
-);
+// Reply through sendResponse: Chrome before 148 ignores a promise returned by the listener.
+browser.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
+  onMessage(msg)
+    .catch((err) => ({ ok: false, error: err.message }))
+    .then(sendResponse);
+  return true;
+});
 browser.runtime.onStartup.addListener(resetState);
 browser.runtime.onInstalled.addListener(resetState);
 

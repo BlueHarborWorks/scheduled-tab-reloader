@@ -1,5 +1,8 @@
+globalThis.browser ??= globalThis.chrome;
+
 const $ = (id) => document.getElementById(id);
-const MIN_INTERVAL_MS = 10 * 1000;
+// Matches background.js: Chrome alarms fire at most every 30 seconds.
+const MIN_INTERVAL_MS = typeof browser.runtime.getBrowserInfo === "function" ? 10 * 1000 : 30 * 1000;
 const PREF_FIELDS = ["interval-value", "interval-unit", "duration-value", "duration-unit"];
 
 let tabs = []; // tabs in the current window (the picker)
@@ -55,7 +58,7 @@ function readForm() {
 
 function validate({ tabIds, intervalMs, durationMs }) {
   if (tabIds.length === 0) return "Select at least one tab.";
-  if (!(intervalMs >= MIN_INTERVAL_MS)) return "The interval must be at least 10 seconds.";
+  if (!(intervalMs >= MIN_INTERVAL_MS)) return `The interval must be at least ${MIN_INTERVAL_MS / 1000} seconds.`;
   if (durationMs != null && !(durationMs >= intervalMs)) return "The duration must be at least one interval long.";
   return null;
 }
@@ -71,7 +74,7 @@ function updateSummary() {
   $("duration-value").disabled = $("duration-unit").value === "forever";
   // The spinner's lower bound follows the unit, so arrowing down cannot
   // land on an interval the background would reject.
-  $("interval-value").min = $("interval-unit").value === "1000" ? "10" : "1";
+  $("interval-value").min = $("interval-unit").value === "1000" ? String(MIN_INTERVAL_MS / 1000) : "1";
   $("start").disabled = !!error;
   if (error) {
     $("summary").textContent = error;

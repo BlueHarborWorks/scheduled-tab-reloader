@@ -3,7 +3,7 @@ const test = require("node:test");
 const assert = require("node:assert");
 const path = require("node:path");
 
-function setup({ badgeThrows = false } = {}) {
+function setup({ badgeThrows = false, chrome = false } = {}) {
   let now = 1_000_000;
   const store = {};
   const alarms = new Map();
@@ -36,7 +36,13 @@ function setup({ badgeThrows = false } = {}) {
       reload: async (id, opts) => reloads.push({ id, at: now, ...opts }),
       onRemoved: on("removed"),
     },
-    runtime: { onMessage: on("message"), onStartup: on("startup"), onInstalled: on("installed") },
+    runtime: {
+      onMessage: on("message"),
+      onStartup: on("startup"),
+      onInstalled: on("installed"),
+      // Firefox-only; its absence is how background.js recognizes Chrome.
+      ...(!chrome && { getBrowserInfo: async () => ({ name: "Firefox" }) }),
+    },
   };
   Date.now = () => now;
 
@@ -50,7 +56,11 @@ function setup({ badgeThrows = false } = {}) {
     // Fire every pending alarm the way Firefox does: scheduledTime = due time.
     fire: async (name, scheduledTime) => bg.onAlarm({ name, scheduledTime }),
     // The runtime.onMessage listener as registered, including its error wrapper.
-    message: (msg) => listeners.message(msg),
+    // It answers through sendResponse and returns true, which Chrome and Firefox both accept.
+    message: (msg) => new Promise((resolve, reject) => {
+      const keepOpen = listeners.message(msg, {}, resolve);
+      if (keepOpen !== true) reject(new Error("listener must return true to answer asynchronously"));
+    }),
   };
 }
 
@@ -126,6 +136,23 @@ test("invalid input is rejected", async () => {
   const r3 = await t.bg.onMessage({ type: "start", tabIds: [1], intervalMs: 5 * MIN, durationMs: MIN }).catch((e) => e);
   assert.match(String(r3.message || r3.error), /one interval/);
   assert.strictEqual(t.alarms.size, 0);
+});
+
+test("Chrome requires at least 30 seconds, because its alarms fire no more often than that", async () => {
+  const t = setup({ chrome: true });
+  assert.strictEqual(t.bg.MIN_INTERVAL_MS, 30_000);
+  const tooShort = await t.message({ type: "start", tabIds: [1], intervalMs: 10_000, durationMs: null });
+  assert.deepStrictEqual(tooShort, { ok: false, error: "The interval must be at least 30 seconds." });
+  const ok = await t.message({ type: "start", tabIds: [1], intervalMs: 30_000, durationMs: null });
+  assert.ok(ok.ok, JSON.stringify(ok));
+  assert.deepStrictEqual([...t.alarms.values()], [{ delayInMinutes: 0.5, periodInMinutes: 0.5 }]);
+});
+
+test("Firefox allows 10-second intervals", async () => {
+  const t = setup();
+  assert.strictEqual(t.bg.MIN_INTERVAL_MS, 10_000);
+  const res = await t.message({ type: "start", tabIds: [1], intervalMs: 10_000, durationMs: 60_000 });
+  assert.ok(res.ok, JSON.stringify(res));
 });
 
 test("the message listener turns a thrown error into an { ok: false } reply", async () => {
